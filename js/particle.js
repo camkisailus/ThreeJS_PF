@@ -8,18 +8,43 @@ class ParticleFilter {
         this.observations = new Array();
         this.jitter_coeff = jitter;
         for(let i = 0; i < this.n; i++){
-            this.particles.push(new Particle(i, i, i));
+            this.particles.push(new Particle(Math.random()*50, Math.random()*50, Math.random()*50));
             this.weights.push(1 / this.n);
         }
+        const fake_obs = new StaticObject(0, 0, 0);
+        this.observations.push(fake_obs);
         this.add_observations = function(obj){
             this.observations.push(obj);
         }
         this.update_filter = function(){
-            jitter();
-            weight();
+            this.jitter();
+            this.weight();
+            this.resample();
         }
     }
 
+    resample(){
+        console.log(this.particles)
+        console.log(this.weights)
+        var temp_p = new Array();
+        const r = Math.random() / this.n;
+        var c = this.weights[0];
+        var i = 1;
+        for(let m = 1; m <= this.n; m++){
+            const U = r + (m - 1)/this.n;
+            while( U > c){
+                i++;
+                c += this.weights[i];
+
+            }
+            console.log(['i: ', i])
+            console.log(['pushing: ', this.particles[i]])
+            temp_p.push(this.particles[i]);
+        }
+        this.particles = temp_p;
+        console.log(this.particles)
+
+    }
     weight(){
         for(let i = 0; i < this.n; i++){
             const part = this.particles[i];
@@ -41,7 +66,6 @@ class ParticleFilter {
         for (let k = 0; k < this.n; k++){
             this.weights[k] /= weight_sum;
         }
-        console.log("Updated weights")
     }
     jitter(){
         for(let i = 0; i < this.n; i++){

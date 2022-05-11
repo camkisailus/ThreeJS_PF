@@ -14,7 +14,7 @@ function init() {
 
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
-    const n = 5;
+    const n = 100;
     pf = new ParticleFilter(n, 0.01);
     for(let i=0; i < n; i++){
         scene.add(pf.particles[i].mesh)
