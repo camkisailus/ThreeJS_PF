@@ -1,23 +1,10 @@
 import * as THREE from '../node_modules/three/build/three.module.js';
 import { TrackballControls } from '../node_modules/three/examples/jsm/controls/TrackballControls.js';
+import {ParticleFilter} from './particle.js'
+
+let scene, camera, renderer, controls, pf;
 
 
-let scene, camera, renderer, cube, cube2, controls;
-
-class Particle{
-    constructor(x, y, z){
-        this.x = x;
-        this.y = y;
-        this.z = z;
-        this.geometry = new THREE.SphereGeometry(0.05);
-        this.material = new THREE.MeshBasicMaterial({color: 0x00ff00});
-        this.mesh = new THREE.Mesh(this.geometry, this.material);
-        this.mesh.position.x = x;
-        this.mesh.position.y = y;
-        this.mesh.position.z = z;
-    }
-
-}
 function init() {
     scene = new THREE.Scene();
 
@@ -27,18 +14,24 @@ function init() {
 
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
+    const n = 5;
+    pf = new ParticleFilter(n, 0.01);
+    for(let i=0; i < n; i++){
+        scene.add(pf.particles[i].mesh)
+    }
 
-    cube = new Particle(0, 0, 0);
-    cube2 = new Particle(1, 0, 0);
-    scene.add(cube2.mesh);
-    scene.add(cube.mesh);
+    // cube = new Particle(0, 0, 0);
+    // cube2 = new Particle(1, 0, 0);
+    // scene.add(cube2.mesh);
+    // scene.add(cube.mesh);
     controls = new TrackballControls( camera, renderer.domElement );
     controls.target.set( 0, 0, 0 );
 }
 
 function animate(){
     requestAnimationFrame(animate);
-    controls.update()
+    controls.update();
+    pf.update_filter();
     renderer.render(scene, camera);
 }
 
