@@ -14,11 +14,18 @@ function init() {
 
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
-    const n = 100;
+    const n = 10;
     pf = new ParticleFilter(n, 0.01);
-    for(let i=0; i < n; i++){
-        scene.add(pf.particles[i].mesh)
+    for(let i = 0; i < n; i++){
+        pf.particles[i].show(scene);
     }
+    for(let i = 0; i < pf.observations.length; i++){
+        pf.observations[i].show(scene);
+    }
+    // for(let i=0; i < n; i++){
+    //     scene.add(pf.particles[i].mesh)
+    //     scene.add(pf.observations[0].mesh)
+    // }
 
     // cube = new Particle(0, 0, 0);
     // cube2 = new Particle(1, 0, 0);
@@ -31,7 +38,7 @@ function init() {
 function animate(){
     requestAnimationFrame(animate);
     controls.update();
-    pf.update_filter();
+    // pf.update_filter();
     renderer.render(scene, camera);
 }
 
@@ -40,6 +47,11 @@ function onWindowResize(){
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
 }
+
+document.getElementById("step_filter_update").addEventListener('click', function(){
+    console.log("Clicked!")
+    pf.update_filter();
+});
 
 window.addEventListener('resize', onWindowResize, false);
 init();
