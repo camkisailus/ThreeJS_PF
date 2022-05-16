@@ -1,7 +1,8 @@
 import * as THREE from '../node_modules/three/build/three.module.js';
 import { TrackballControls } from  '../node_modules/three/examples/jsm/controls/TrackballControls.js';
 import { GLTFLoader } from '../node_modules/three/examples/jsm/loaders/GLTFLoader.js';
-import {ParticleFilter} from './particle.js'
+import { ParticleFilter } from './particle.js';
+import { Region } from './region.js';
 let scene, camera, renderer, controls, pf, loader;
 
 function init() {
@@ -21,22 +22,21 @@ function init() {
     controls.target.set( 1,1,1);
 
     // Load GLTF model
-    loader = new GLTFLoader();
-    loader.load('../models/centered_apt.glb', function(gltf){
-        scene.add(gltf.scene);
-    }, undefined, function (error){
-        console.error(error);
-    });
-    const geometry = new THREE.BoxGeometry(10,10,17);
-    const material = new THREE.MeshBasicMaterial( { color: 0x00ff00 } );
-    const cube = new THREE.Mesh( geometry, material );
-    cube.position.z = -12;
-    cube.position.x = 5;
-    const box = new THREE.Box3( ).setFromObject( cube );		 
-	const boxHelper = new THREE.Box3Helper( box, 0xffff00 );
-    scene.add( boxHelper );
-    console.log(box.min);
-    console.log(box.max);
+    // loader = new GLTFLoader();
+    // loader.load('../models/centered_apt.glb', function(gltf){
+    //     scene.add(gltf.scene);
+    // }, undefined, function (error){
+    //     console.error(error);
+    // });
+    // const geometry = new THREE.BoxGeometry(10,10,17);
+    // const material = new THREE.MeshBasicMaterial( { color: 0x00ff00 } );
+    // const cube = new THREE.Mesh( geometry, material );
+    // cube.position.z = -12;
+    // cube.position.x = 5;
+    // const box = new THREE.Box3( ).setFromObject( cube );		 
+	// const boxHelper = new THREE.Box3Helper( box, 0xffff00 );
+    // scene.add( boxHelper );
+
     // scene.add( cube );
     // Kitchen:
     //  x: (0, 10)
@@ -66,22 +66,25 @@ function init() {
     mesh.rotation.x = Math.PI * -.5;
     mesh.position.y -= 1;
     scene.add(mesh);
+    const axesHelper = new THREE.AxesHelper( 5 );
+    scene.add( axesHelper );
 }
-// function init_particle_filters(){
-//     const n = 500;
-//     pf = new ParticleFilter(n, 0.01);
-//     for(let i = 0; i < n; i++){
-//         pf.particles[i].show(scene);
-//     }
-//     for(let i = 0; i < pf.observations.length; i++){
-//         pf.observations[i].show(scene);
-//     }
-//     for(let i=0; i < n; i++){
-//         scene.add(pf.particles[i].mesh)
-//         scene.add(pf.observations[0].mesh)
-//     }
+function init_particle_filters(){
+    let kitchen_region = new Region(0, -5, -20.5, 10, 5, -3.5);
+    const n = 5;
+    pf = new ParticleFilter(n, [kitchen_region], 0.01);
+    for(let i = 0; i < n; i++){
+        pf.particles[i].show(scene);
+    }
+    for(let i = 0; i < pf.observations.length; i++){
+        pf.observations[i].show(scene);
+    }
+    for(let i=0; i < n; i++){
+        scene.add(pf.particles[i].mesh)
+        scene.add(pf.observations[0].mesh)
+    }
 
-// }
+}
 
 function animate(){
     requestAnimationFrame(animate);
@@ -128,4 +131,5 @@ document.getElementById("cam_pose").addEventListener('click', function(){
 
 window.addEventListener('resize', onWindowResize, false);
 init();
+init_particle_filters();
 animate();

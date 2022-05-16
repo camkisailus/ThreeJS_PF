@@ -1,31 +1,37 @@
 import * as THREE from '../node_modules/three/build/three.module.js';
 
 class ParticleFilter {
-    constructor(n, jitter){
+    constructor(n, valid_regions, jitter){
         this.n = n;
         this.particles = new Array(n);
         this.weights = new Array(n);
         this.observations = new Array();
         this.jitter_coeff = jitter;
         for(let i = 0; i < this.n; i++){
-            var x = Math.random() * 5;
-            var y = Math.random() * 5;
-            var z = Math.random() * 5;
-            if (x < 2.5){
-                x *= -1;
-            }else{
-                x -= 2.5;
-            }
-            if (y < 2.5){
-                y *= -1;
-            }else{
-                y -= 2.5;
-            }
-            if (z < 2.5){
-                z *= -1;
-            }else{
-                z -= 2.5;
-            }
+            var region_idx = i % valid_regions.length;
+
+            var x = valid_regions[region_idx].min.x + Math.random() * (valid_regions[region_idx].max.x - valid_regions[region_idx].min.x);
+            var y = valid_regions[region_idx].min.y + Math.random() * (valid_regions[region_idx].max.y - valid_regions[region_idx].min.y);
+            var z = valid_regions[region_idx].min.y + Math.random() * (valid_regions[region_idx].max.z - valid_regions[region_idx].min.z);
+            console.log([x, y, z])
+            // var x = Math.random() * 5;
+            // var y = Math.random() * 5;
+            // var z = Math.random() * 5;
+            // if (x < 2.5){
+            //     x *= -1;
+            // }else{
+            //     x -= 2.5;
+            // }
+            // if (y < 2.5){
+            //     y *= -1;
+            // }else{
+            //     y -= 2.5;
+            // }
+            // if (z < 2.5){
+            //     z *= -1;
+            // }else{
+            //     z -= 2.5;
+            // }
             var part = new Particle(x, y, z);
             this.particles[i] = part;
             this.weights[i] = 1 / this.n;
@@ -169,7 +175,7 @@ class Particle{
         this.x = x;
         this.y = y;
         this.z = z;
-        this.geometry = new THREE.SphereGeometry(0.05);
+        this.geometry = new THREE.SphereGeometry(.5);
         this.material = new THREE.MeshBasicMaterial({color: 0x00ff00});
         this.mesh = new THREE.Mesh(this.geometry, this.material);
         this.mesh.position.x = x;
