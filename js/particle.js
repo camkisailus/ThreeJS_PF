@@ -9,34 +9,14 @@ class ParticleFilter {
         this.jitter_coeff = jitter;
         for(let i = 0; i < this.n; i++){
             var region_idx = i % valid_regions.length;
-
-            var x = valid_regions[region_idx].min.x + Math.random() * (valid_regions[region_idx].max.x - valid_regions[region_idx].min.x);
-            var y = valid_regions[region_idx].min.y + Math.random() * (valid_regions[region_idx].max.y - valid_regions[region_idx].min.y);
-            var z = valid_regions[region_idx].min.y + Math.random() * (valid_regions[region_idx].max.z - valid_regions[region_idx].min.z);
-            console.log([x, y, z])
-            // var x = Math.random() * 5;
-            // var y = Math.random() * 5;
-            // var z = Math.random() * 5;
-            // if (x < 2.5){
-            //     x *= -1;
-            // }else{
-            //     x -= 2.5;
-            // }
-            // if (y < 2.5){
-            //     y *= -1;
-            // }else{
-            //     y -= 2.5;
-            // }
-            // if (z < 2.5){
-            //     z *= -1;
-            // }else{
-            //     z -= 2.5;
-            // }
+            var x = Math.floor(Math.random() * (valid_regions[region_idx].max.x - valid_regions[region_idx].min.x)) + valid_regions[region_idx].min.x;
+            var y = Math.floor(Math.random() * (valid_regions[region_idx].max.y - valid_regions[region_idx].min.y)) + valid_regions[region_idx].min.y;
+            var z = Math.floor(Math.random() * (valid_regions[region_idx].max.z - valid_regions[region_idx].min.z)) + valid_regions[region_idx].min.z;
             var part = new Particle(x, y, z);
             this.particles[i] = part;
             this.weights[i] = 1 / this.n;
         }
-        const fake_obs = new StaticObject(0, 0, 0);
+        const fake_obs = new StaticObject(5, 4, -12);
         this.observations.push(fake_obs);
         this.add_observations = function(obj){
             this.observations.push(obj);
@@ -44,8 +24,15 @@ class ParticleFilter {
         this.update_filter = function(){
             this.jitter();
             this.weight();
-            // this.resample();
-            // this.observations[0].x += 0.1;
+            this.resample();
+        }
+        this.show = function(scene){
+            for(let i = 0; i < this.n; i++){
+                this.particles[i].show(scene);
+            }
+            for(let i = 0; i < this.observations.length; i++){
+                this.observations[i].show(scene);
+            }
         }
     }
 
@@ -62,7 +49,7 @@ class ParticleFilter {
 
         //Deep copy is needed for resampling.
         this.particlesDeepCopy = new Array(this.n);
-        for (var i =0 ;i < this.n ; i++)
+        for (var i = 0; i < this.n; i++)
           {
             this.particlesDeepCopy[i] = new Particle(this.particles[i].x, this.particles[i].y, this.particles[i].z);
           }
@@ -94,7 +81,7 @@ class ParticleFilter {
             if ( sample >= CDF[this.n-1] )
                 index = this.n-1;
 
-            this.particles[i] = this.particlesDeepCopy[index];
+            this.particles[i].update_position(this.particlesDeepCopy[index].x, this.particlesDeepCopy[index].y, this.particlesDeepCopy[index].z); // = this.particlesDeepCopy[index];
         }
     }
 
@@ -135,13 +122,10 @@ class ParticleFilter {
     jitter(){
         for(let i = 0; i < this.n; i++){
             var rand = this.randn_bm();
-            var x = rand* this.jitter_coeff;
-            var y = rand* this.jitter_coeff;
-            var z = rand* this.jitter_coeff;
+            var x = this.particles[i].x + rand* this.jitter_coeff;
+            var y = this.particles[i].y + rand* this.jitter_coeff;
+            var z = this.particles[i].z + rand* this.jitter_coeff;
             this.particles[i].update_position(x, y, z);
-            // this.particles[i].mesh.position.x += rand * this.jitter_coeff;
-            // this.particles[i].mesh.position.y += rand * this.jitter_coeff;
-            // this.particles[i].mesh.position.z += rand * this.jitter_coeff;
         }
     }
 
@@ -158,8 +142,8 @@ class StaticObject{
         this.x = x;
         this.y = y;
         this.z = z;
-        this.geometry = new THREE.BoxGeometry(0.05, 0.05, 0.05);
-        this.material = new THREE.MeshBasicMaterial({color: 0xFF5733});
+        this.geometry = new THREE.BoxGeometry(1,1,1,);
+        this.material = new THREE.MeshBasicMaterial({color: 0xFF0000});
         this.mesh = new THREE.Mesh(this.geometry, this.material);
         this.mesh.position.x = x;
         this.mesh.position.y = y;
