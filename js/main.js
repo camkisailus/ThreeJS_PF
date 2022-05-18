@@ -3,7 +3,7 @@ import { TrackballControls } from  '../node_modules/three/examples/jsm/controls/
 import { GLTFLoader } from '../node_modules/three/examples/jsm/loaders/GLTFLoader.js';
 import { ParticleFilter } from './particle.js';
 import { Region } from './region.js';
-let scene, camera, renderer, controls, pf, loader, kitchenBox;
+let scene, camera, renderer, controls, pf, loader, kitchenBox, update;
 
 function init() {
     // Init Scene and Controls
@@ -65,25 +65,30 @@ function init_particle_filters(){
     const n = 50;
     pf = new ParticleFilter(n, [kitchenBox], 0.01);
     pf.show(scene);
-    // const geometry = new THREE.BoxGeometry(1,1,1);
-    // const minmaterial = new THREE.MeshBasicMaterial( { color: 0x00ff00 } );
-    // const maxmaterial = new THREE.MeshBasicMaterial( { color: 0xff0000 } );
-    // const mincube = new THREE.Mesh( geometry, minmaterial );
-    // mincube.position.x = kitchenBox.min.x;
-    // mincube.position.y = kitchenBox.min.y;
-    // mincube.position.z = kitchenBox.min.z;
-    // const maxcube = new THREE.Mesh(geometry, maxmaterial);
-    // maxcube.position.x = kitchenBox.max.x;
-    // maxcube.position.y = kitchenBox.max.y;
-    // maxcube.position.z = kitchenBox.max.z;
-    // scene.add(mincube);
-    // scene.add(maxcube);
-
+    update = false;
 }
+
+// function reset_particle_filters(){
+//     for(let i = 0; i < pf.particles.length; i++){
+//         scene.remove(pf.particles[i]);
+//         pf.particles[i].geometry.dispose();
+//         pf.particles[i].material.dispose();
+//         pf.particles[i] = undefined; //
+//     }
+//     for(let i = 0; i < pf.observations.length; i++){
+//         scene.remove(pf.observations[i]);
+//         pf.observations[i].geometry.dispose();
+//         pf.observations[i].material.dispose();
+//         pf.observations[i] = undefined; //
+//     }
+// }
 
 function animate(){
     requestAnimationFrame(animate);
     controls.update();
+    if(update){
+        pf.update_filter();
+    }
     pf.show(scene);
     renderer.render(scene, camera);
 }
@@ -94,14 +99,15 @@ function onWindowResize(){
     renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
-document.getElementById("update_filter").addEventListener('click', function(){
-    pf.update_filter();
-    console.log(pf.particles.length);
+document.getElementById("update_filters").addEventListener('click', function(){
+    if(update){
+        update = false;
+    }else{
+        update = true;
+    }
 });
-// document.getElementById("dec_x_rot").addEventListener('click', function(){
-//     model.rotation.x -= 0.1;
-//     console.log(model.rotation);
-//     // console.log(model.position.x);
+// document.getElementById("clear_filters").addEventListener('click', function(){
+//     reset_particle_filters();
 // });
 // document.getElementById("inc_y_pos").addEventListener('click', function(){
 //     model.position.x += 0.5;

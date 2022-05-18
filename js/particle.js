@@ -7,13 +7,11 @@ class ParticleFilter {
         this.weights = new Array(n);
         this.observations = new Array();
         this.jitter_coeff = jitter;
+        this.reinvigoration_idx = 0;
+        this.valid_regions = valid_regions;
         for(let i = 0; i < this.n; i++){
-            var region_idx = i % valid_regions.length;
-            var x = Math.floor(Math.random() * (valid_regions[region_idx].max.x - valid_regions[region_idx].min.x)) + valid_regions[region_idx].min.x;
-            var y = Math.floor(Math.random() * (valid_regions[region_idx].max.y - valid_regions[region_idx].min.y)) + valid_regions[region_idx].min.y;
-            var z = Math.floor(Math.random() * (valid_regions[region_idx].max.z - valid_regions[region_idx].min.z)) + valid_regions[region_idx].min.z;
-            var part = new Particle(x, y, z);
-            this.particles[i] = part;
+            var part = new Particle();
+            this.particles[i] = this.reinvigorate(part);
             this.weights[i] = 1 / this.n;
         }
         const fake_obs = new StaticObject(5, 4, -12);
@@ -22,9 +20,12 @@ class ParticleFilter {
             this.observations.push(obj);
         }
         this.update_filter = function(){
-            this.jitter();
-            this.weight();
-            this.resample();
+            for(let i = 0; i < this.particles.length; i++){
+                this.particles[i] = this.reinvigorate(this.particles[i]);
+            }
+            // this.jitter();
+            // this.weight();
+            // this.resample();
         }
         this.show = function(scene){
             for(let i = 0; i < this.n; i++){
@@ -34,6 +35,17 @@ class ParticleFilter {
                 this.observations[i].show(scene);
             }
         }
+    }
+
+    reinvigorate(particle){
+        const region_idx = this.reinvigoration_idx % this.valid_regions.length;
+        const region = this.valid_regions[region_idx];
+        const x = Math.floor(Math.random() * (region.max.x - region.min.x)) + region.min.x;
+        const y = Math.floor(Math.random() * (region.max.y - region.min.y)) + region.min.y;
+        const z = Math.floor(Math.random() * (region.max.z - region.min.z)) + region.min.z;
+        particle.update_position(x, y, z);
+        this.reinvigoration_idx++;
+        return particle;
     }
 
     resample() {
@@ -59,7 +71,7 @@ class ParticleFilter {
         for (var i=0; i < 2;i++)
         {   
             // Update particle values don't overwrite
-            this.particles[i] = this.ArgMaxWeightParticle;
+            this.particles[i].update_position(this.ArgMaxWeightParticle.x, this.ArgMaxWeightParticle.y, this.ArgMaxWeightParticle.z);
         }
 
 
@@ -107,7 +119,7 @@ class ParticleFilter {
                 const y_dist = Math.pow(obs.y - part.y, 2);
                 const z_dist = Math.pow(obs.z - part.z, 2);
                 const dist = Math.sqrt(x_dist + y_dist + z_dist);
-                var phi = Math.exp(-50 * dist);
+                var phi = Math.exp(-5 * dist);
                 if( phi > max_phi){
                     max_phi = phi;
                 }
