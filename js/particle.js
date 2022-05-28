@@ -10,7 +10,7 @@ class ParticleFilter {
         this.valid_regions = valid_regions;
         for(let i = 0; i < this.n; i++){
             var part = new Particle(0, 0, 0, 0x00ff00);
-            this.particles[i] = this.#reinvigorate(part);
+            this.particles[i] = this.reinvigorate(part);
             this.weights[i] = 1 / this.n;
         }
     }
@@ -19,6 +19,15 @@ class ParticleFilter {
         for(let i = 0; i < this.particles.length; i++){
             this.particles[i].show(scene);
         }
+        // const max_weight = Math.max(...this.weights);
+        // const min_weight = Math.max(...this.weights);
+        // const thresh = min_weight + (max_weight - min_weight) * 0.8; 
+        // for(let i = 0; i < this.particles.length; i++){
+        //     if(this.weights[i] >= thresh){
+        //         this.particles[i].show(scene);
+        //     }
+            
+        // }
 
     }
 
@@ -32,99 +41,20 @@ class ParticleFilter {
     }
 
     low_variance_resample(){
-        // console.log(this.particles);
-        // console.log(this.weights);
+
         let w = this.#cumulative_sum(this.weights);
+        return this.particles[this.#random_sample(w)];
         let sampled_particles = new Array();
-        for(let i = 0; i < this.n*0.8; i++){
+        for(let i = 0; i < this.n*0.95; i++){
             sampled_particles.push(this.particles[this.#random_sample(w)]);
         }
         for(let i = 0; i < this.n; i++){
             if( i < sampled_particles.length){
                 this.particles[i].update_position(sampled_particles[i].x, sampled_particles[i].y, sampled_particles[i].z);
             }else{
-                this.particles[i] = this.#reinvigorate(this.particles[i]);
+                this.particles[i] = this.reinvigorate(this.particles[i]);
             }
 
-        }
-        // var particles_added = 0;
-        // var temp_particles = new Array();
-        // var w = this.#cumulative_sum(this.weights);
-        // var r = Math.random() / this.n;
-        // var j = 0;
-        // const best_particle = this.#getBestSample();
-        // console.log(best_particle);
-        // temp_particles.push(best_particle);
-        // temp_particles.push(this.jitter(best_particle));
-        // particles_added = 2;
-        // Use low variance resampling to generate temp_particles
-        // for(let i = 0; i < this.n; i++){
-        //     var u = r + (i-1) / this.n;
-        //     while(u > w[j]){
-        //         j += 1;
-        //     }
-        //     temp_particles.push(this.particles[j]);
-        //     particles_added++;
-        //     if(particles_added > this.n*0.9){
-        //         break;
-        //     }
-        // }
-        // // Reinvigorate the rest
-        // for(let i = particles_added; i < this.n; i++){
-        //     temp_particles.push(this.#reinvigorate(this.particles[i]));
-        // }
-        // // Replace this.particles with temp_particles
-        // for(let i = 0; i < this.n; i++){
-        //     this.particles[i].update_position(temp_particles[i].x, temp_particles[i].y, temp_particles[i].z);
-        // }
-    }
-
-    resample() {
-
-        //The CDF will determine the index used for draw with replacement.
-        //Cumulative Distribution Function 
-        var CDF = new Array(this.n);
-        var sum = 0.0;
-        for (var i = 0; i < this.n; i++) {
-            sum += this.weights[i];
-            CDF[i] = sum;
-        }
-
-        //Deep copy is needed for resampling.
-        this.particlesDeepCopy = new Array(this.n);
-        for (var i = 0; i < this.n; i++)
-          {
-            this.particlesDeepCopy[i] = new Particle(this.particles[i].x, this.particles[i].y, this.particles[i].z);
-          }
-
-        //The best sample is allocated at the begining of the particle list.
-        this.#getBestSample()
-        for (var i=0; i < 2;i++)
-        {   
-            // Update particle values don't overwrite
-            this.particles[i].update_position(this.ArgMaxWeightParticle.x, this.ArgMaxWeightParticle.y, this.ArgMaxWeightParticle.z);
-        }
-
-
-        //Draw with replacement routine.
-        var index = 0;
-        for (var i = 2; i < this.n; i++) {
-
-            //Sampling from uniform distribution
-            var sample = Math.random();
-
-            for (var k = 1; k < this.n; k++) {
-                if ( (CDF[k-1] < sample) && (CDF[k] > sample) )
-                {
-                    index = k;
-                    break;
-        
-                }
-            }
-            if ( sample >= CDF[this.n-1] )
-                index = this.n-1;
-
-            this.particles[i].update_position(this.particlesDeepCopy[index].x, this.particlesDeepCopy[index].y, this.particlesDeepCopy[index].z); // = this.particlesDeepCopy[index];
         }
     }
 
@@ -150,7 +80,7 @@ class ParticleFilter {
         }
         return sum;
     }
-    #reinvigorate(particle){
+    reinvigorate(particle){
         const region_idx = this.reinvigoration_idx % this.valid_regions.length;
         const region = this.valid_regions[region_idx];
         const x = Math.floor(Math.random() * (region.max.x - region.min.x)) + region.min.x;
@@ -188,10 +118,10 @@ class ObjectParticleFilter extends ParticleFilter{
         super(n, valid_regions);
         this.label = label;
         this.observations = new Array();
-        const fake_obs = new StaticObject(5, 4, -12);
-        const other_obs = new StaticObject(8, 4, -12);
-        this.observations.push(other_obs);
-        this.observations.push(fake_obs);
+        // const fake_obs = new StaticObject(5, 4, -12);
+        // const other_obs = new StaticObject(8, 4, -12);
+        // this.observations.push(other_obs);
+        // this.observations.push(fake_obs);
     }
 
     add_observation(x, y, z){
@@ -201,13 +131,39 @@ class ObjectParticleFilter extends ParticleFilter{
     update_filter(){
         super.jitter();
         this.#weight();
-        super.low_variance_resample();
+        this.#resample();
     }
 
     show(scene){
         super.show(scene);
         for(let i =0; i < this.observations.length; i++){
             this.observations[i].show(scene);
+        }
+    }
+    #resample(){
+        if(this.observations.length === 0){
+            for(let i = 0; i < this.n; i++){
+                this.particles[i] = super.reinvigorate(this.particles[i]);
+            }
+        }else{
+            var num_particles_added = 0;
+            // reinvigorate
+            for(let i = 0; i < this.n*0.2; i++){
+                this.particles[i] = super.reinvigorate(this.particles[i]);
+                num_particles_added++;
+            }
+            // low var resample
+            for(let i = num_particles_added; i < this.n*0.4; i++){
+                const sample = super.low_variance_resample();
+                this.particles[i].update_position(sample.x, sample.y, sample.z);
+                num_particles_added++;
+            }
+            // rest go to ground truth
+            for(let i = num_particles_added; i < this.n; i++){
+                const obs = this.observations[i%this.observations.length];
+                this.particles[i].update_position(obs.x, obs.y, obs.z);
+            }
+            
         }
     }
 
@@ -222,8 +178,8 @@ class ObjectParticleFilter extends ParticleFilter{
             // Iterate through each particle
             for(let i = 0; i < this.n; i++){
                 const part = this.particles[i];
-                var max_phi = 0;
-                // Iterate through all observations
+                var max_phi_m = 0;
+                // Calculate phi_m
                 for(let j = 0; j < this.observations.length; j++){
                     var obs = this.observations[j];
                     var x_dist = Math.pow(obs.x - part.x, 2);
@@ -231,13 +187,25 @@ class ObjectParticleFilter extends ParticleFilter{
                     var z_dist = Math.pow(obs.z - part.z, 2);
                     var dist = Math.sqrt(x_dist + y_dist + z_dist);
                     var phi = Math.exp(-1 * dist);
-                    if( phi > max_phi){
-                        max_phi = phi;
+                    if( phi > max_phi_m){
+                        max_phi_m = phi;
                     }
                 }
-                this.weights[i] = max_phi;
+                this.weights[i] = max_phi_m;
+                // sum over all relations
+                // for(let r = 0; r < this.relations.length; r++){
+                //     // sum over all landmarks
+                //     for(let l = 0; l < this.landmarks.length; l++){
+
+                    
+                //     }
+                // }
+
+                // Calculate phi_r
             }
+            // this.weights = phi_m;
         }
+
         // Normalize
         const weight_sum = this.weights.reduce((partialSum, a) => partialSum + a, 0);
         for (let k = 0; k < this.n; k++){

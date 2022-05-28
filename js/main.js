@@ -108,9 +108,10 @@ document.getElementById("update_filters").addEventListener('click', function(){
         update = true;
     }
 });
-// document.getElementById("clear_filters").addEventListener('click', function(){
-//     reset_particle_filters();
-// });
+document.getElementById("add_observations").addEventListener('click', function(){
+    pf.add_observation(5, 4, -12);
+    pf.add_observation(8,4, -12);
+});
 // document.getElementById("inc_y_pos").addEventListener('click', function(){
 //     model.position.x += 0.5;
 //     console.log(model.position);
