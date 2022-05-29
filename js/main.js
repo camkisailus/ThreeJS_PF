@@ -1,7 +1,7 @@
 import * as THREE from '../node_modules/three/build/three.module.js';
 import { TrackballControls } from  '../node_modules/three/examples/jsm/controls/TrackballControls.js';
 import { GLTFLoader } from '../node_modules/three/examples/jsm/loaders/GLTFLoader.js';
-import { ParticleFilter } from './particle.js';
+import { ObjectParticleFilter } from './particle.js';
 import { Region } from './region.js';
 let scene, camera, renderer, controls, pf, loader, kitchenBox, update;
 
@@ -63,7 +63,7 @@ function init() {
 }
 function init_particle_filters(){
     const n = 50;
-    pf = new ParticleFilter(n, [kitchenBox], 0.01);
+    pf = new ObjectParticleFilter(n, 'foo', [kitchenBox]);
     pf.show(scene);
     update = false;
 }
@@ -93,6 +93,7 @@ function animate(){
     renderer.render(scene, camera);
 }
 
+
 function onWindowResize(){
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
@@ -100,15 +101,17 @@ function onWindowResize(){
 }
 
 document.getElementById("update_filters").addEventListener('click', function(){
+    // pf.update_filter();
     if(update){
         update = false;
     }else{
         update = true;
     }
 });
-// document.getElementById("clear_filters").addEventListener('click', function(){
-//     reset_particle_filters();
-// });
+document.getElementById("add_observations").addEventListener('click', function(){
+    pf.add_observation(5, 4, -12);
+    pf.add_observation(8,4, -12);
+});
 // document.getElementById("inc_y_pos").addEventListener('click', function(){
 //     model.position.x += 0.5;
 //     console.log(model.position);
