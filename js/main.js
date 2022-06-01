@@ -1,9 +1,9 @@
 import * as THREE from '../node_modules/three/build/three.module.js';
 import { TrackballControls } from  '../node_modules/three/examples/jsm/controls/TrackballControls.js';
 import { GLTFLoader } from '../node_modules/three/examples/jsm/loaders/GLTFLoader.js';
-import { ObjectParticleFilter } from './particle.js';
+import { ObjectParticleFilter, FrameParticleFilter } from './particle.js';
 import { Region } from './region.js';
-let scene, camera, renderer, controls, pf, loader, kitchenBox, update;
+let scene, camera, renderer, controls, obj_pfs, sf_pfs, loader, kitchenBox, update;
 
 function init() {
     // Init Scene and Controls
@@ -60,11 +60,56 @@ function init() {
     scene.add(mesh);
     const axesHelper = new THREE.AxesHelper( 5 );
     scene.add( axesHelper );
+
+    obj_pfs = new Array();
+    sf_pfs = new Array();
+
+}
+
+function parse_sf(fpath){
+    console.log("Parsing json at: ", fpath);
+    fetch(fpath)
+    .then(response => {
+    return response.json();
+    })
+    .then(jsondata =>{
+        const sf_name = jsondata.name;
+        const valid_regions = jsondata.valid_regions;
+        var frame_pf = new FrameParticleFilter(50, sf_name, [kitchenBox]);
+        var frame_elems = new Array();
+        for(let i = 0; i < jsondata.frame_elements.length; i++){
+            if(jsondata.frame_elements[i].is_core){
+                frame_elems.push(jsondata.frame_elements[i].name);
+            }
+        }
+        var preconditions = new Array();
+        try{
+            for(let j = 0; j < jsondata.preconditons.length; j++){
+                preconditions.push(jsondata.preconditions[i].name);
+            }
+        }catch{
+            preconditions.push("None");
+        }
+        frame_pfs.push(frame_pf);
+        console.log(frame_pfs);
+        // console.log(frame_pf);
+    });
+    console.log(frame_pfs);
+    
 }
 function init_particle_filters(){
-    const n = 50;
-    pf = new ObjectParticleFilter(n, 'foo', [kitchenBox]);
-    pf.show(scene);
+    var spoon_pf = new ObjectParticleFilter(50, 'spoon', [kitchenBox], 0x00ff00);
+    obj_pfs.push(spoon_pf);
+    var grasp_spoon_pf = new FrameParticleFilter(50, 'grasp_spoon', [kitchenBox])
+    grasp_spoon_pf.add_frame_elem(spoon_pf, 'spoon')
+    sf_pfs.push(grasp_spoon_pf)
+    
+    for(let i = 0; i < obj_pfs.length; i++){
+        obj_pfs[i].show(scene)
+    }
+    for(let i = 0; i < sf_pfs.length; i++){
+        sf_pfs[i].show(scene)
+    }
     update = false;
 }
 
@@ -87,9 +132,18 @@ function animate(){
     requestAnimationFrame(animate);
     controls.update();
     if(update){
-        pf.update_filter();
+        for(let i = 0; i < obj_pfs.length; i++){
+            obj_pfs[i].update_filter(scene);
+        }
+        for(let i = 0; i < sf_pfs.length; i++){
+            sf_pfs[i].update_filter(scene);
+        }
+        // for(let i = 0; i < sf_pfs.length; i++){
+        //     sf_pfs[i].show(scene)
+        // }
+        
     }
-    pf.show(scene);
+    // pf.show(scene);
     renderer.render(scene, camera);
 }
 
@@ -102,6 +156,16 @@ function onWindowResize(){
 
 document.getElementById("update_filters").addEventListener('click', function(){
     // pf.update_filter();
+    // for(let iters = 0; iters < 1; iters++){
+    //     console.log(iters)
+    //     for(let i = 0; i < obj_pfs.length; i++){
+    //         obj_pfs[i].update_filter(scene);
+    //     }
+    //     for(let i = 0; i < sf_pfs.length; i++){
+    //         sf_pfs[i].update_filter(scene);
+    //     }
+    // }
+
     if(update){
         update = false;
     }else{
@@ -109,29 +173,13 @@ document.getElementById("update_filters").addEventListener('click', function(){
     }
 });
 document.getElementById("add_observations").addEventListener('click', function(){
-    pf.add_observation(5, 4, -12);
-    pf.add_observation(8,4, -12);
+    for(let i = 0; i < obj_pfs.length; i++){
+        if(obj_pfs[i].label == 'spoon'){
+            obj_pfs[i].add_observation(5, 4, -12);
+            obj_pfs[i].add_observation(8, 4, -12);
+        }
+    }
 });
-// document.getElementById("inc_y_pos").addEventListener('click', function(){
-//     model.position.x += 0.5;
-//     console.log(model.position);
-//     // console.log(model.position.x);
-// });
-// document.getElementById("dec_y_pos").addEventListener('click', function(){
-//     model.position.x -= 0.5;
-//     console.log(model.position);
-//     // console.log(model.position.x);
-// });
-// document.getElementById("inc_z_pos").addEventListener('click', function(){
-//     model.position.y += 0.5;
-//     console.log(model.position);
-//     // console.log(model.position.x);
-// });
-// document.getElementById("dec_z_pos").addEventListener('click', function(){
-//     model.position.y -= 0.5;
-//     console.log(model.position);
-//     // console.log(model.position.x);
-// });
 
 window.addEventListener('resize', onWindowResize, false);
 init();

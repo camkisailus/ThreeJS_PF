@@ -1,0 +1,19 @@
+{
+  "name": "stir_mug",
+  "description": "stir contents of mug with a spoon",
+  "frame_elements": [
+    {
+      "name": "spoon",
+      "is_core": true
+    },
+    {
+      "name": "mug",
+      "is_core": true
+    }
+  ],
+  "preconditions": [
+    {
+      "name": "grasp_spoon"
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+    "name": "grasp_mug",
+    "description": "grasp a mug",
+    "frame_elements": [
+      {
+        "name": "mug",
+        "is_core": true
+      },
+      {
+        "name": "object_compound_modifier",
+        "is_core": false
+      },
+      {
+        "name": "object_adjective_modifier",
+        "is_core": false
+      }
+    ]
+  }
