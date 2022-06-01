@@ -1,7 +1,7 @@
 import * as THREE from '../node_modules/three/build/three.module.js';
 
 class ParticleFilter {
-    constructor(n, valid_regions, color){
+    constructor(n, valid_regions, color, shape){
         this.n = n;
         this.particles = new Array(n);
         this.weights = new Array(n);
@@ -9,7 +9,7 @@ class ParticleFilter {
         this.reinvigoration_idx = 0;
         this.valid_regions = valid_regions;
         for(let i = 0; i < this.n; i++){
-            var part = new Particle(0, 0, 0, color);
+            var part = new Particle(0, 0, 0, color, shape);
             this.particles[i] = this.reinvigorate(part);
             this.weights[i] = 1 / this.n;
         }
@@ -156,9 +156,9 @@ class FrameParticleFilter extends ParticleFilter{
         }else if(label == 'grasp_mug'){
             color = 0xff0000;
         }else if(label == 'stir_mug'){
-            color = 0x00ff00;
+            color = 0xA233FF;
         }
-        super(n, valid_regions, color)
+        super(n, valid_regions, color, 'box')
         // this.particles[0] = new Particle(5, 4, -12, 0x0000ff);
         // this.particles[1] = new Particle(8, 4, -12), 0x0000ff;
         // this.particles[2] = new Particle(6.5, 4, -12, 0x0000ff);
@@ -169,7 +169,11 @@ class FrameParticleFilter extends ParticleFilter{
         this.frame_elems_filters = new Array();
         this.preconditions = new Array();
         this.precondition_filters = new Array();
-        this.state = ['Idle'];
+        this.state = ['idle'];
+        if(label === 'stir_mug'){
+            this.state = ['grasp_spoon']
+        }
+        
         // for(let i = 0; i < core_frame_elems.length; i++){
         //     if(core_frame_elems[i]!= 'None'){
         //         this.frame_elems.push(core_frame_elems[i]);
@@ -210,9 +214,9 @@ class FrameParticleFilter extends ParticleFilter{
         // console.log(this.weights)
         const best_sample = super.getBestSample();
         const best_sample_copy = new Particle(best_sample.x, best_sample.y, best_sample.z, best_sample.color);
-        // console.log('best_sample: ', best_sample.x, best_sample.y, best_sample.z);
+        if(this.label === 'stir_mug') console.log('best_sample: ', best_sample.x, best_sample.y, best_sample.z);
         var particles_added = 0;
-        const resample_count = Math.floor(this.n*.2);
+        const resample_count = Math.floor(this.n*.95);
         const resampled_particles = super.low_variance_resample(resample_count);
         // console.log('resampled: ', resampled_particles)
         for(let i = 0; i < resample_count; i++){
@@ -254,7 +258,7 @@ class FrameParticleFilter extends ParticleFilter{
         // determine which object action is most likely near
         if(this.preconditions[0] != 'None'){
             for(let i = 0; i < this.preconditions.length; i++){
-                if(!state.include(this.preconditions[i])){
+                if(!state.includes(this.preconditions[i])){
                     break;
                 }else{
                     idx++;
@@ -262,18 +266,17 @@ class FrameParticleFilter extends ParticleFilter{
             }
         }
         // console.log(this.frame_elems_filters);
-        const core_elem_filter = this.frame_elems_filters[[idx]];
-        var close_to = 0;
+        const core_elem_filter = this.frame_elems_filters[idx];
+        console.log('filter: ', this.label, ' compare to: ', core_elem_filter.label);
         for(let i = 0; i < core_elem_filter.particles.length; i++){
             const other_part = core_elem_filter.particles[i];
             var x_dist = Math.pow(other_part.x - particle.x, 2);
             var y_dist = Math.pow(other_part.y - particle.y, 2);
             var z_dist = Math.pow(other_part.z - particle.z, 2);
             var dist = Math.sqrt(x_dist + y_dist + z_dist);
-            var phi = Math.exp(-1/2 * dist);
+            var phi = Math.exp(-1 * dist);
             // console.log('dist: ',dist, ' phi: ',phi);
             if(phi >= 0.5){
-                close_to++;
                 potential += core_elem_filter.weights[i];
             }
         }
@@ -281,11 +284,41 @@ class FrameParticleFilter extends ParticleFilter{
         // console.log('potential: ', potential)
         return potential;
     }
+
+    #context_potential(particle, state){
+        // Frame near the next precondition to be completed
+        var potential = 1;
+        var idx = 0;
+        if(this.preconditions[0] != 'None'){
+            for(let i = 0; i < this.preconditions.length; i++){
+                if(!state.include(this.preconditions[i])){
+                    break;
+                }else{
+                    idx++;
+                }
+            }
+        }
+
+        const precondition_filter = this.precondition_filters[idx];
+        for(let i = 0; i < core_elem_filter.particles.length; i++){
+            const other_part = core_elem_filter.particles[i];
+            var x_dist = Math.pow(other_part.x - particle.x, 2);
+            var y_dist = Math.pow(other_part.y - particle.y, 2);
+            var z_dist = Math.pow(other_part.z - particle.z, 2);
+            var dist = Math.sqrt(x_dist + y_dist + z_dist);
+            var phi = Math.exp(-1 * dist);
+            // console.log('dist: ',dist, ' phi: ',phi);
+            if(phi >= 0.5){
+                potential += core_elem_filter.weights[i];
+            }
+        }
+        return potential;
+    }
 }
 
 class ObjectParticleFilter extends ParticleFilter{
     constructor(n, label, valid_regions, color){
-        super(n, valid_regions, color);
+        super(n, valid_regions, color, 'sphere');
         // this.particles = new Array(5);
         // this.particles[0] = new Particle(5, 4, -12, color);
         // this.particles[1] = new Particle(8, 4, -12), color;
@@ -315,9 +348,9 @@ class ObjectParticleFilter extends ParticleFilter{
 
     show(scene){
         super.show(scene);
-        for(let i =0; i < this.observations.length; i++){
-            this.observations[i].show(scene);
-        }
+        // for(let i =0; i < this.observations.length; i++){
+        //     this.observations[i].show(scene);
+        // }
     }
     #resample(){
         if(this.observations.length === 0){
@@ -417,11 +450,17 @@ class StaticObject{
 }
 
 class Particle{
-    constructor(x, y, z, color){
+    constructor(x, y, z, color, shape){
         this.x = x;
         this.y = y;
         this.z = z;
-        this.geometry = new THREE.SphereGeometry(.5);
+        if(shape === 'sphere'){
+            this.geometry = new THREE.SphereGeometry(.5);
+        }
+        if(shape === 'box'){
+            this.geometry = new THREE.BoxGeometry(.5, .5, .5); 
+        }
+        
         this.material = new THREE.MeshBasicMaterial({color: color, transparent: true});
         this.mesh = new THREE.Mesh(this.geometry, this.material);
         this.mesh.position.x = x;

@@ -100,13 +100,21 @@ function parse_sf(fpath){
 function init_particle_filters(){
     var spoon_pf = new ObjectParticleFilter(50, 'spoon', [kitchenBox], 0x00ff00);
     obj_pfs.push(spoon_pf);
+    var mug_pf = new ObjectParticleFilter(50, 'mug', [kitchenBox], 0xff0000);
+    obj_pfs.push(mug_pf);
     var grasp_spoon_pf = new FrameParticleFilter(50, 'grasp_spoon', [kitchenBox])
     grasp_spoon_pf.add_frame_elem(spoon_pf, 'spoon')
     sf_pfs.push(grasp_spoon_pf)
+
+    var stir_mug_pf = new FrameParticleFilter(50, 'stir_mug', [kitchenBox]);
+    stir_mug_pf.add_frame_elem(spoon_pf, 'spoon');
+    stir_mug_pf.add_frame_elem(mug_pf, 'mug');
+    stir_mug_pf.add_precondition(grasp_spoon_pf, 'grasp_spoon');
+    sf_pfs.push(stir_mug_pf);
     
-    for(let i = 0; i < obj_pfs.length; i++){
-        obj_pfs[i].show(scene)
-    }
+    // for(let i = 0; i < obj_pfs.length; i++){
+    //     obj_pfs[i].show(scene)
+    // }
     for(let i = 0; i < sf_pfs.length; i++){
         sf_pfs[i].show(scene)
     }
@@ -154,28 +162,30 @@ function onWindowResize(){
     renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
-document.getElementById("update_filters").addEventListener('click', function(){
+document.getElementById("update_obj_filters").addEventListener('click', function(){
     // pf.update_filter();
-    // for(let iters = 0; iters < 1; iters++){
-    //     console.log(iters)
-    //     for(let i = 0; i < obj_pfs.length; i++){
-    //         obj_pfs[i].update_filter(scene);
-    //     }
-    //     for(let i = 0; i < sf_pfs.length; i++){
-    //         sf_pfs[i].update_filter(scene);
-    //     }
-    // }
-
-    if(update){
-        update = false;
-    }else{
-        update = true;
+    for(let i = 0; i < obj_pfs.length; i++){
+        obj_pfs[i].update_filter(scene);
     }
 });
+document.getElementById("update_frame_filters").addEventListener('click', function(){
+    // pf.update_filter();
+    for(let i = 0; i < sf_pfs.length; i++){
+        sf_pfs[i].update_filter(scene);
+    }
+});
+    
+
+    // if(update){
+    //     update = false;
+    // }else{
+    //     update = true;
+    // }
 document.getElementById("add_observations").addEventListener('click', function(){
     for(let i = 0; i < obj_pfs.length; i++){
-        if(obj_pfs[i].label == 'spoon'){
+        if(obj_pfs[i].label === 'spoon'){
             obj_pfs[i].add_observation(5, 4, -12);
+        }else if(obj_pfs[i].label === 'mug'){
             obj_pfs[i].add_observation(8, 4, -12);
         }
     }
