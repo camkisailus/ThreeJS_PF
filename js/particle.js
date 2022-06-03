@@ -8,11 +8,29 @@ class ParticleFilter {
         this.jitter_coeff = 0.25;
         this.reinvigoration_idx = 0;
         this.valid_regions = valid_regions;
+        this.region_reinvig_p = new Array(this.valid_regions.length);
+        // get total volume of all valid regions
+        var total_volume = 0;
+        var indivual_volumes = new Array(valid_regions.length);
+        for(let i = 0; i < valid_regions.length; i++){
+            const region = this.valid_regions[i];
+            const length = region.max.x - region.min.x;
+            const width = region.max.y - region.min.y;
+            const height = region.max.z - region.min.z;
+            const volume = length*width*height;
+            indivual_volumes[i] = volume;
+            total_volume += volume;
+        }
+        for(let i = 0; i < this.region_reinvig_p.length; i++){
+            this.region_reinvig_p[i] = indivual_volumes[i] / total_volume;
+        }
+        this.region_reinvig_p = this.#cumulative_sum(this.region_reinvig_p);
         for(let i = 0; i < this.n; i++){
             var part = new Particle(0, 0, 0, color, shape);
             this.particles[i] = this.reinvigorate(part);
             this.weights[i] = 1 / this.n;
         }
+
     }
 
     show(scene){
@@ -61,13 +79,12 @@ class ParticleFilter {
 
     reinvigorate(particle){
         // console.log(particle);
-        const region_idx = this.reinvigoration_idx % this.valid_regions.length;
+        var region_idx = this.#random_sample(this.region_reinvig_p);
         const region = this.valid_regions[region_idx];
         const x = Math.floor(Math.random() * (region.max.x - region.min.x)) + region.min.x;
         const y = Math.floor(Math.random() * (region.max.y - region.min.y)) + region.min.y;
         const z = Math.floor(Math.random() * (region.max.z - region.min.z)) + region.min.z;
         particle.update_position(x, y, z);
-        this.reinvigoration_idx++;
         return particle;
     }
 
@@ -95,8 +112,8 @@ class ParticleFilter {
     }
 
     #cumulative_sum(weights_arr){
-        var sum = new Array(this.n);
-        for(let i = 0; i < this.n; i++){
+        var sum = new Array(weights_arr.length);
+        for(let i = 0; i < sum.length; i++){
             if(i===0){
                 sum[i] = weights_arr[i];
             }else{
@@ -132,6 +149,7 @@ class FrameParticleFilter extends ParticleFilter{
         this.preconditions = new Array();
         this.precondition_filters = new Array();
         this.state = ['idle'];
+        console.log('label: ', this.label, ' rp: ', this.region_reinvig_p);
     }
 
     add_frame_elem(frame_filter, frame_name){
@@ -156,16 +174,15 @@ class FrameParticleFilter extends ParticleFilter{
         const best_sample = super.getBestSample();
         const best_sample_copy = new Particle(best_sample.x, best_sample.y, best_sample.z, best_sample.color);
         var particles_added = 0;
-        const resample_count = Math.floor(this.n*.99);
+        const resample_count = Math.floor(this.n*.80);
         const resampled_particles = super.low_variance_resample(resample_count);
         for(let i = 0; i < resample_count; i++){
             this.particles[i].update_position(resampled_particles[i].x, resampled_particles[i].y, resampled_particles[i].z);
             this.weights[i] = 1 / this.n;
             particles_added++;
         }
-        for(let j = particles_added; j < this.n; j++){
-            this.particles[j].update_position(best_sample_copy.x, best_sample_copy.y, best_sample_copy.z);  
-
+        for(let i = resample_count; i < this.n; i++){
+            super.reinvigorate(this.particles[i]);
         }
     }
 
@@ -197,15 +214,20 @@ class FrameParticleFilter extends ParticleFilter{
                 }
             }
         }
-        const core_elem_filter = this.frame_elems_filters[idx];
-        for(let i = 0; i < core_elem_filter.particles.length; i++){
-            const other_part = core_elem_filter.particles[i];
-            var x_dist = Math.pow(other_part.x - particle.x, 2);
-            var y_dist = Math.pow(other_part.y - particle.y, 2);
-            var z_dist = Math.pow(other_part.z - particle.z, 2);
-            var dist = Math.sqrt(x_dist + y_dist + z_dist);
-            var phi = Math.exp(-1 * dist);
-            potential += (phi * core_elem_filter.weights[i]);
+        var core_elem_weight_modifier = 1;
+        while(idx < this.frame_elems_filters.length){
+            const core_elem_filter = this.frame_elems_filters[idx];
+            for(let i = 0; i < core_elem_filter.particles.length; i++){
+                const other_part = core_elem_filter.particles[i];
+                var x_dist = Math.pow(other_part.x - particle.x, 2);
+                var y_dist = Math.pow(other_part.y - particle.y, 2);
+                var z_dist = Math.pow(other_part.z - particle.z, 2);
+                var dist = Math.sqrt(x_dist + y_dist + z_dist);
+                var phi = Math.exp(-1 * dist);
+                potential += ((1/core_elem_weight_modifier)*(phi * core_elem_filter.weights[i]));
+            }
+            idx++;
+            core_elem_weight_modifier++;
         }
         return potential;
     }
@@ -245,6 +267,7 @@ class ObjectParticleFilter extends ParticleFilter{
         super(n, valid_regions, color, 'sphere');
         this.label = label;
         this.observations = new Array();
+        console.log('label: ', this.label, ' rp: ', this.region_reinvig_p);
     }
 
     add_observation(x, y, z){
@@ -260,6 +283,7 @@ class ObjectParticleFilter extends ParticleFilter{
     show(scene){
         super.show(scene);
     }
+
     resample(){
         if(this.observations.length === 0){
             for(let i = 0; i < this.n; i++){

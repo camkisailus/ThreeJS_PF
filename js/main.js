@@ -103,7 +103,7 @@ function init_particle_filters(){
     var spoon_pf = new ObjectParticleFilter(50, 'spoon', [livingRoomBox, b4], 0x00ff00);
     obj_pfs.push(spoon_pf);
     all_filters.push(spoon_pf);
-    var mug_pf = new ObjectParticleFilter(50, 'mug', [b4], 0xff0000);
+    var mug_pf = new ObjectParticleFilter(50, 'mug', [b1,b4], 0xff0000);
     obj_pfs.push(mug_pf);
     all_filters.push(mug_pf);
     var grasp_spoon_pf = new FrameParticleFilter(50, 'grasp_spoon', [livingRoomBox, kitchenBox]);
