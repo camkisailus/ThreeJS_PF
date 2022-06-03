@@ -3,7 +3,7 @@ import { TrackballControls } from  '../node_modules/three/examples/jsm/controls/
 import { GLTFLoader } from '../node_modules/three/examples/jsm/loaders/GLTFLoader.js';
 import { ObjectParticleFilter, FrameParticleFilter } from './particle.js';
 import { Region } from './region.js';
-let scene, camera, renderer, controls, obj_pfs, sf_pfs, loader, kitchenBox, update;
+let scene, camera, renderer, controls, obj_pfs, sf_pfs, all_filters, loader, kitchenBox, livingRoomBox, b1, b2, b3, b4, update;
 
 function init() {
     // Init Scene and Controls
@@ -36,6 +36,38 @@ function init() {
     cube.position.y = 4;
     kitchenBox = new THREE.Box3( ).setFromObject( cube );
 
+    const living_room = new THREE.Mesh(geometry, material);
+    living_room.position.z = -12;
+    living_room.position.x = -10;
+    living_room.position.y = 4;
+    livingRoomBox = new THREE.Box3( ).setFromObject(living_room);
+
+    const boxgeometry = new THREE.BoxGeometry(5,10,6);
+    const b1cube = new THREE.Mesh( boxgeometry, material );
+    b1cube.position.z = -9;
+    b1cube.position.x = 7.5;
+    b1cube.position.y = 4;
+    b1 = new THREE.Box3( ).setFromObject( b1cube );
+
+    const b2cube = new THREE.Mesh( boxgeometry, material );
+    b2cube.position.z = -9;
+    b2cube.position.x = 2.5;
+    b2cube.position.y = 4;
+    b2 = new THREE.Box3( ).setFromObject( b2cube );
+
+    const b3cube = new THREE.Mesh( boxgeometry, material );
+    b3cube.position.z = -15;
+    b3cube.position.x = 7.5;
+    b3cube.position.y = 4;
+    b3 = new THREE.Box3( ).setFromObject( b3cube );
+
+    const b4cube = new THREE.Mesh( boxgeometry, material );
+    b4cube.position.z = -15;
+    b4cube.position.x = 2.5;
+    b4cube.position.y = 4;
+    b4 = new THREE.Box3( ).setFromObject( b4cube );
+    
+
     // Init Ambient Light
     const ambientLight = new THREE.AmbientLight();
     scene.add(ambientLight);
@@ -63,95 +95,41 @@ function init() {
 
     obj_pfs = new Array();
     sf_pfs = new Array();
+    all_filters = new Array();
 
 }
 
-function parse_sf(fpath){
-    console.log("Parsing json at: ", fpath);
-    fetch(fpath)
-    .then(response => {
-    return response.json();
-    })
-    .then(jsondata =>{
-        const sf_name = jsondata.name;
-        const valid_regions = jsondata.valid_regions;
-        var frame_pf = new FrameParticleFilter(50, sf_name, [kitchenBox]);
-        var frame_elems = new Array();
-        for(let i = 0; i < jsondata.frame_elements.length; i++){
-            if(jsondata.frame_elements[i].is_core){
-                frame_elems.push(jsondata.frame_elements[i].name);
-            }
-        }
-        var preconditions = new Array();
-        try{
-            for(let j = 0; j < jsondata.preconditons.length; j++){
-                preconditions.push(jsondata.preconditions[i].name);
-            }
-        }catch{
-            preconditions.push("None");
-        }
-        frame_pfs.push(frame_pf);
-        console.log(frame_pfs);
-        // console.log(frame_pf);
-    });
-    console.log(frame_pfs);
-    
-}
 function init_particle_filters(){
-    var spoon_pf = new ObjectParticleFilter(50, 'spoon', [kitchenBox], 0x00ff00);
+    var spoon_pf = new ObjectParticleFilter(50, 'spoon', [livingRoomBox, b4], 0x00ff00);
     obj_pfs.push(spoon_pf);
-    var mug_pf = new ObjectParticleFilter(50, 'mug', [kitchenBox], 0xff0000);
+    all_filters.push(spoon_pf);
+    var mug_pf = new ObjectParticleFilter(50, 'mug', [b4], 0xff0000);
     obj_pfs.push(mug_pf);
-    var grasp_spoon_pf = new FrameParticleFilter(50, 'grasp_spoon', [kitchenBox])
-    grasp_spoon_pf.add_frame_elem(spoon_pf, 'spoon')
-    sf_pfs.push(grasp_spoon_pf)
+    all_filters.push(mug_pf);
+    var grasp_spoon_pf = new FrameParticleFilter(50, 'grasp_spoon', [livingRoomBox, kitchenBox]);
+    grasp_spoon_pf.add_frame_elem(spoon_pf, 'spoon');
+    sf_pfs.push(grasp_spoon_pf);
+    all_filters.push(grasp_spoon_pf);
 
-    var stir_mug_pf = new FrameParticleFilter(50, 'stir_mug', [kitchenBox]);
+    var stir_mug_pf = new FrameParticleFilter(50, 'stir_mug', [livingRoomBox, kitchenBox]);
     stir_mug_pf.add_frame_elem(spoon_pf, 'spoon');
     stir_mug_pf.add_frame_elem(mug_pf, 'mug');
     stir_mug_pf.add_precondition(grasp_spoon_pf, 'grasp_spoon');
     sf_pfs.push(stir_mug_pf);
+    all_filters.push(stir_mug_pf);
     
-    // for(let i = 0; i < obj_pfs.length; i++){
-    //     obj_pfs[i].show(scene)
-    // }
+    for(let i = 0; i < obj_pfs.length; i++){
+        obj_pfs[i].show(scene)
+    }
     for(let i = 0; i < sf_pfs.length; i++){
         sf_pfs[i].show(scene)
     }
     update = false;
 }
 
-// function reset_particle_filters(){
-//     for(let i = 0; i < pf.particles.length; i++){
-//         scene.remove(pf.particles[i]);
-//         pf.particles[i].geometry.dispose();
-//         pf.particles[i].material.dispose();
-//         pf.particles[i] = undefined; //
-//     }
-//     for(let i = 0; i < pf.observations.length; i++){
-//         scene.remove(pf.observations[i]);
-//         pf.observations[i].geometry.dispose();
-//         pf.observations[i].material.dispose();
-//         pf.observations[i] = undefined; //
-//     }
-// }
-
 function animate(){
     requestAnimationFrame(animate);
     controls.update();
-    if(update){
-        for(let i = 0; i < obj_pfs.length; i++){
-            obj_pfs[i].update_filter(scene);
-        }
-        for(let i = 0; i < sf_pfs.length; i++){
-            sf_pfs[i].update_filter(scene);
-        }
-        // for(let i = 0; i < sf_pfs.length; i++){
-        //     sf_pfs[i].show(scene)
-        // }
-        
-    }
-    // pf.show(scene);
     renderer.render(scene, camera);
 }
 
@@ -162,25 +140,20 @@ function onWindowResize(){
     renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
-document.getElementById("update_obj_filters").addEventListener('click', function(){
-    // pf.update_filter();
-    for(let i = 0; i < obj_pfs.length; i++){
-        obj_pfs[i].update_filter(scene);
+document.getElementById("update_filters").addEventListener('click', function(){
+    for(let i = 0; i < all_filters.length; i++){
+        all_filters[i].jitter();
+    }
+    for(let i = 0; i < all_filters.length; i++){
+        all_filters[i].weight();
+    }
+    for(let i = 0; i < all_filters.length; i++){
+        all_filters[i].resample();
+    }
+    for(let i = 0; i < all_filters.length; i++){
+        all_filters[i].show(scene);
     }
 });
-document.getElementById("update_frame_filters").addEventListener('click', function(){
-    // pf.update_filter();
-    for(let i = 0; i < sf_pfs.length; i++){
-        sf_pfs[i].update_filter(scene);
-    }
-});
-    
-
-    // if(update){
-    //     update = false;
-    // }else{
-    //     update = true;
-    // }
 document.getElementById("add_observations").addEventListener('click', function(){
     for(let i = 0; i < obj_pfs.length; i++){
         if(obj_pfs[i].label === 'spoon'){
