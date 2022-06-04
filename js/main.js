@@ -100,23 +100,23 @@ function init() {
 }
 
 function init_particle_filters(){
-    var spoon_pf = new ObjectParticleFilter(50, 'spoon', [livingRoomBox, b4], 0x00ff00);
+    var spoon_pf = new ObjectParticleFilter(50, 'spoon', [livingRoomBox, kitchenBox], 0x00ff00);
     obj_pfs.push(spoon_pf);
     all_filters.push(spoon_pf);
-    var mug_pf = new ObjectParticleFilter(50, 'mug', [b1,b4], 0xff0000);
-    obj_pfs.push(mug_pf);
-    all_filters.push(mug_pf);
-    var grasp_spoon_pf = new FrameParticleFilter(50, 'grasp_spoon', [livingRoomBox, kitchenBox]);
-    grasp_spoon_pf.add_frame_elem(spoon_pf, 'spoon');
-    sf_pfs.push(grasp_spoon_pf);
-    all_filters.push(grasp_spoon_pf);
+    // var mug_pf = new ObjectParticleFilter(50, 'mug', [b1,b4], 0xff0000);
+    // obj_pfs.push(mug_pf);
+    // all_filters.push(mug_pf);
+    // var grasp_spoon_pf = new FrameParticleFilter(50, 'grasp_spoon', [livingRoomBox, kitchenBox]);
+    // grasp_spoon_pf.add_frame_elem(spoon_pf, 'spoon');
+    // sf_pfs.push(grasp_spoon_pf);
+    // all_filters.push(grasp_spoon_pf);
 
-    var stir_mug_pf = new FrameParticleFilter(50, 'stir_mug', [livingRoomBox, kitchenBox]);
-    stir_mug_pf.add_frame_elem(spoon_pf, 'spoon');
-    stir_mug_pf.add_frame_elem(mug_pf, 'mug');
-    stir_mug_pf.add_precondition(grasp_spoon_pf, 'grasp_spoon');
-    sf_pfs.push(stir_mug_pf);
-    all_filters.push(stir_mug_pf);
+    // var stir_mug_pf = new FrameParticleFilter(50, 'stir_mug', [livingRoomBox, kitchenBox]);
+    // stir_mug_pf.add_frame_elem(spoon_pf, 'spoon');
+    // stir_mug_pf.add_frame_elem(mug_pf, 'mug');
+    // stir_mug_pf.add_precondition(grasp_spoon_pf, 'grasp_spoon');
+    // sf_pfs.push(stir_mug_pf);
+    // all_filters.push(stir_mug_pf);
     
     for(let i = 0; i < obj_pfs.length; i++){
         obj_pfs[i].show(scene)
@@ -158,8 +158,7 @@ document.getElementById("add_observations").addEventListener('click', function()
     for(let i = 0; i < obj_pfs.length; i++){
         if(obj_pfs[i].label === 'spoon'){
             obj_pfs[i].add_observation(5, 4, -12);
-        }else if(obj_pfs[i].label === 'mug'){
-            obj_pfs[i].add_observation(8, 4, -12);
+            obj_pfs[i].add_observation(-5, 4, -12);
         }
     }
 });

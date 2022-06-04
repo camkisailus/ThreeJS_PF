@@ -5,7 +5,7 @@ class ParticleFilter {
         this.n = n;
         this.particles = new Array(n);
         this.weights = new Array(n);
-        this.jitter_coeff = 0.25;
+        this.jitter_coeff = 0.05;
         this.reinvigoration_idx = 0;
         this.valid_regions = valid_regions;
         this.region_reinvig_p = new Array(this.valid_regions.length);
@@ -34,19 +34,27 @@ class ParticleFilter {
     }
 
     show(scene){
-        const min_weight = Math.min(...this.weights); 
-        const weight_range = Math.max(...this.weights) - min_weight;
-        
-        for(let i = 0; i < this.particles.length; i++){
-            if(weight_range != 0){
-                var opacity = 0.25 + (this.weights[i] - min_weight) / (weight_range);
-                if(opacity > 1.0){
-                    opacity = 1.0;
-                }
-                this.particles[i].update_opacity(opacity);
-            }
+        for(let i = 0; i < this.n; i++){
+            var opacity = 1.0;
+            // if(this.weights[i] < 1/this.n){
+            //     opacity = 0.0;
+            // }
+            this.particles[i].update_opacity(opacity);
             this.particles[i].show(scene);
         }
+        // const min_weight = Math.min(...this.weights); 
+        // const weight_range = Math.max(...this.weights) - min_weight;
+        
+        // for(let i = 0; i < this.particles.length; i++){
+        //     if(weight_range != 0){
+        //         var opacity = 0.25 + (this.weights[i] - min_weight) / (weight_range);
+        //         if(opacity > 1.0){
+        //             opacity = 1.0;
+        //         }
+        //         this.particles[i].update_opacity(opacity);
+        //     }
+        //     this.particles[i].show(scene);
+        // }
     }
 
     jitter(){
@@ -171,19 +179,24 @@ class FrameParticleFilter extends ParticleFilter{
     }
 
     resample(){
-        const best_sample = super.getBestSample();
-        const best_sample_copy = new Particle(best_sample.x, best_sample.y, best_sample.z, best_sample.color);
-        var particles_added = 0;
-        const resample_count = Math.floor(this.n*.80);
-        const resampled_particles = super.low_variance_resample(resample_count);
-        for(let i = 0; i < resample_count; i++){
-            this.particles[i].update_position(resampled_particles[i].x, resampled_particles[i].y, resampled_particles[i].z);
-            this.weights[i] = 1 / this.n;
-            particles_added++;
+        for(let i = 0; i < this.n; i++){
+            if(this.weights[i] < 1/this.n){
+                super.reinvigorate(this.particles[i]);
+            }
         }
-        for(let i = resample_count; i < this.n; i++){
-            super.reinvigorate(this.particles[i]);
-        }
+        // const best_sample = super.getBestSample();
+        // const best_sample_copy = new Particle(best_sample.x, best_sample.y, best_sample.z, best_sample.color);
+        // var particles_added = 0;
+        // const resample_count = Math.floor(this.n*.80);
+        // const resampled_particles = super.low_variance_resample(resample_count);
+        // for(let i = 0; i < resample_count; i++){
+        //     this.particles[i].update_position(resampled_particles[i].x, resampled_particles[i].y, resampled_particles[i].z);
+        //     this.weights[i] = 1 / this.n;
+        //     particles_added++;
+        // }
+        // for(let i = resample_count; i < this.n; i++){
+        //     super.reinvigorate(this.particles[i]);
+        // }
     }
 
     weight(){
@@ -282,6 +295,9 @@ class ObjectParticleFilter extends ParticleFilter{
 
     show(scene){
         super.show(scene);
+        for(let i = 0; i < this.observations.length; i++){
+            this.observations[i].show(scene);
+        }
     }
 
     resample(){
@@ -291,29 +307,36 @@ class ObjectParticleFilter extends ParticleFilter{
                 this.weights[i] = 1 / this.n;
             }
         }else{
-            var num_particles_added = 0;
-            // low var resample
-            const resample_count = Math.floor(this.n*0.6);
-            const resampled_particles = super.low_variance_resample(resample_count);
-            for(let i = 0; i < resample_count; i++){
-                this.particles[i].update_position(resampled_particles[i].x, resampled_particles[i].y, resampled_particles[i].z)
-                num_particles_added++;
+            for(let i = 0; i < this.n; i++){
+                if(this.weights[i] >= 1/this.n){
+                    continue;
+                }else{
+                    super.reinvigorate(this.particles[i]);
+                }
             }
+            // var num_particles_added = 0;
+            // // low var resample
+            // const resample_count = Math.floor(this.n*0.6);
+            // const resampled_particles = super.low_variance_resample(resample_count);
+            // for(let i = 0; i < resample_count; i++){
+            //     this.particles[i].update_position(resampled_particles[i].x, resampled_particles[i].y, resampled_particles[i].z)
+            //     num_particles_added++;
+            // }
 
             
-            // reinvigorate
-            const reinvigorate_count = num_particles_added + Math.floor(this.n*0.2);
-            for(let i = num_particles_added; i < reinvigorate_count; i++){
-                super.reinvigorate(this.particles[i]);
-                num_particles_added++;
-            }
+            // // reinvigorate
+            // const reinvigorate_count = num_particles_added + Math.floor(this.n*0.2);
+            // for(let i = num_particles_added; i < reinvigorate_count; i++){
+            //     super.reinvigorate(this.particles[i]);
+            //     num_particles_added++;
+            // }
             
-            // rest go to ground truth
-            for(let i = num_particles_added; i < this.n; i++){
-                const obs = this.observations[i%this.observations.length];
-                this.particles[i].update_position(obs.x, obs.y, obs.z);
-                super.jitter_particle(this.particles[i]);
-            }
+            // // rest go to ground truth
+            // for(let i = num_particles_added; i < this.n; i++){
+            //     const obs = this.observations[i%this.observations.length];
+            //     this.particles[i].update_position(obs.x, obs.y, obs.z);
+            //     super.jitter_particle(this.particles[i]);
+            // }
             
         }
     }
